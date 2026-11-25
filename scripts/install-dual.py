@@ -86,6 +86,8 @@ def main():
     for line in open(a.script):
         t.send(line, 0.005)
     t.send('\n')
+    time.sleep(1)
+    t.buf = b''   # discard the PTY echo of the script itself
 
     t.read_until(rb'waiting_fedora_tar', timeout=180, label='fedora listener')
     stream(5555, ['zstd', '-dc', a.tar], 'fedora')
