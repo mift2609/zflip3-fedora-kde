@@ -17,6 +17,7 @@ find_part() {
 
 lvm vgchange -ay --sysinit "$VG"
 mountpoint -q "$MOUNT" 2>/dev/null || mount -t f2fs -o rw,noatime "/dev/$VG/root" "$MOUNT"
+rm -f /tmp/nc-fed4 /tmp/nc-owrt4 /tmp/nc-boot4
 
 echo "FED_READY_$$"
 mkfifo /tmp/nc-fed4
