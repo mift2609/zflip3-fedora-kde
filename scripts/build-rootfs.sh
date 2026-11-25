@@ -28,11 +28,11 @@ echo "[1/6] kernel $KREL, boot image $BOOTIMG"
 echo "[2/6] Fedora 45 KDE Plasma Desktop raw image (3.8 GiB)"
 RAW_XZ="$CACHE/$FED_RAW"
 RAW="$CACHE/fedora45.raw"
-if [ ! -s "$RAW_XZ" ]; then
+if [ ! -s "$RAW_XZ" ] || [ -s "$RAW_XZ.aria2" ]; then
   rm -f "$RAW_XZ.part"
   aria2c -c -x 8 -s 8 --dir="$CACHE" --out="$FED_RAW" "$FED_URL"
 fi
-curl -fsSL "$FED_SHA_URL" | grep -F "$FED_RAW" |
+curl -fsSL "$FED_SHA_URL" | grep -F "SHA256 ($FED_RAW)" |
   awk '{gsub(/[()]/, "", $2); print $4 "  " $2}' > "$CACHE/fedora.sha"
 ( cd "$CACHE" && sha256sum -c fedora.sha )
 if [ ! -s "$RAW" ]; then
@@ -56,7 +56,7 @@ losetup -d "$LOOP"
 trap - EXIT
 
 echo "[4/6] fetch port image for b2q firmware (1.4 GB)"
-if [ ! -s "$ARCH_TAR" ]; then
+if [ ! -s "$ARCH_TAR" ] || [ -s "$ARCH_TAR.aria2" ]; then
   aria2c -c -x 4 -s 4 --dir="$CACHE" --out="$ARCH_NAME" "$ARCH_URL"
 fi
 FW=$(tar --zstd -tf "$ARCH_TAR" 2>/dev/null | grep -m1 -E '(^\./)?usr/lib/firmware/' || true)
