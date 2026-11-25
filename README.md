@@ -12,6 +12,9 @@ dari `recovery`, DTBO dikosongkan. OpenWrt lama akan ditimpa (disetujui).
 - [ ] Rootfs Fedora 45 KDE Plasma Desktop (image RAW resmi → tar) — `scripts/build-rootfs.sh`.
 - [ ] Suntik modul + firmware + konfigurasi perangkat ke rootfs.
 - [ ] Uji boot tethered, lalu install via installer port (stream tar ke `nc 5555`).
+- [ ] **Setelah boot terbukti**: eksperimen menu pemilih OS yang kelihatan di layar cover
+      lewat program `libdrm` statis di initramfs (tanpa porting U-Boot). Belum diuji —
+      jangan dijanjikan sebelum modeset cover di initramfs terbukti.
 
 ## Constraint hardware: layar utama rusak
 
