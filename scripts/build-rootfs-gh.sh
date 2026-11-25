@@ -21,11 +21,28 @@ fi
 LOOP=$(losetup -Pf --show "$CACHE/fedora.raw")
 cleanup() { umount "$WS/work/mnt" 2>/dev/null || true; losetup -d "$LOOP" 2>/dev/null || true; }
 trap cleanup EXIT
-PART=$(lsblk -ln -o NAME,FSTYPE,SIZE "$LOOP" | awk '$2=="ext4"||$2=="btrfs"{print $1,$3}' | sort -k2 -hr | head -1 | cut -d' ' -f1)
-[ -n "$PART" ] || { echo "no ext4/btrfs partition in RAW" >&2; exit 1; }
-echo "      root partition /dev/$PART"
-mount -o ro "/dev/$PART" work/mnt
-tar -C work/mnt -cf - . | tar -C "$ROOT" -xf -
+lsblk -o NAME,FSTYPE,SIZE "$LOOP" || true
+DEV=""
+t=$(blkid -o value -s TYPE "$LOOP" 2>/dev/null || true)
+if [ -n "$t" ]; then
+  DEV="$LOOP"                      # filesystem directly on the raw image
+else
+  best=0
+  for p in "${LOOP}p"*; do
+    [ -b "$p" ] || continue
+    t=$(blkid -o value -s TYPE "$p" 2>/dev/null || true)
+    case "$t" in ext4|btrfs) ;; *) continue ;; esac
+    sz=$(cat "/sys/block/$(basename "$LOOP")/$(basename "$p")/size" 2>/dev/null || echo 0)
+    [ "$t" = btrfs ] && sz=$((sz + 1000000000))   # root subvol beats a small /boot
+    if [ "$sz" -gt "$best" ]; then best=$sz; DEV=$p; fi
+  done
+fi
+[ -n "$DEV" ] || { echo "no ext4/btrfs filesystem in RAW" >&2; exit 1; }
+echo "      root device $DEV"
+mount -o ro "$DEV" work/mnt
+SRC=work/mnt
+[ -d work/mnt/root/etc ] && SRC=work/mnt/root   # btrfs root subvolume
+tar -C "$SRC" -cf - . | tar -C "$ROOT" -xf -
 umount work/mnt
 losetup -d "$LOOP"
 trap - EXIT
