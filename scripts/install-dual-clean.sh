@@ -15,6 +15,7 @@ find_part() {
 }
 
 lvm vgchange -ay --sysinit "$VG"
+umount "$MOUNT" 2>/dev/null || true
 mkfs.f2fs -f -l b2q-root -O extra_attr,inode_checksum,sb_checksum,compression "/dev/$VG/root"
 mkdir -p "$MOUNT"
 mount -t f2fs -o rw,noatime "/dev/$VG/root" "$MOUNT"
