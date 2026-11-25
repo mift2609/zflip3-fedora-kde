@@ -15,8 +15,8 @@ PORT="$REPO/../zflip3"
 BOOTIMG="$REPO/../zflip3-openwrt/images/linux.img"
 
 FED_RAW=Fedora-KDE-Desktop-Disk-45-1.4.aarch64.raw.xz
-FED_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/45/KDE/aarch64/images/$FED_RAW"
-FED_SHA_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/45/KDE/aarch64/images/Fedora-KDE-45-1.4-aarch64-CHECKSUM"
+FED_URL="https://dl.fedoraproject.org/pub/fedora/linux/releases/45/KDE/aarch64/images/$FED_RAW"
+FED_SHA_URL="https://dl.fedoraproject.org/pub/fedora/linux/releases/45/KDE/aarch64/images/Fedora-KDE-45-1.4-aarch64-CHECKSUM"
 ARCH_NAME=archlinux-zflip3-2026.11.18-rootfs.tar.zst
 ARCH_URL="https://github.com/noas-slopware/linux-zflip3/releases/download/arch-ports-2026.11.18/$ARCH_NAME"
 ARCH_TAR="$CACHE/$ARCH_NAME"
@@ -29,8 +29,8 @@ echo "[2/6] Fedora 45 KDE Plasma Desktop raw image (3.8 GiB)"
 RAW_XZ="$CACHE/$FED_RAW"
 RAW="$CACHE/fedora45.raw"
 if [ ! -s "$RAW_XZ" ]; then
-  curl -fL --retry 3 -o "$RAW_XZ.part" "$FED_URL"
-  mv "$RAW_XZ.part" "$RAW_XZ"
+  rm -f "$RAW_XZ.part" "$RAW_XZ.aria2"
+  aria2c -c -x 8 -s 8 --dir="$CACHE" --out="$FED_RAW" "$FED_URL"
 fi
 curl -fsSL "$FED_SHA_URL" | grep -F "$FED_RAW" |
   awk '{gsub(/[()]/, "", $2); print $4 "  " $2}' > "$CACHE/fedora.sha"
@@ -57,8 +57,7 @@ trap - EXIT
 
 echo "[4/6] fetch port image for b2q firmware (1.4 GB)"
 if [ ! -s "$ARCH_TAR" ]; then
-  curl -fL --retry 3 -o "$ARCH_TAR.part" "$ARCH_URL"
-  mv "$ARCH_TAR.part" "$ARCH_TAR"
+  aria2c -c -x 4 -s 4 --dir="$CACHE" --out="$ARCH_NAME" "$ARCH_URL"
 fi
 FW=$(tar --zstd -tf "$ARCH_TAR" 2>/dev/null | grep -m1 -E '(^\./)?usr/lib/firmware/' || true)
 if [ -n "$FW" ]; then
