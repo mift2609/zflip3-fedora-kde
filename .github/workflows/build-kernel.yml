@@ -1,0 +1,101 @@
+name: kernel-full-b2q
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: 'kernel.org version'
+        required: true
+        default: '7.3.5'
+      kernel_sha256:
+        description: 'sha256 of linux-<version>.tar.xz'
+        required: true
+        default: '8f293f83d54f0b7b9be56863ebc5e4ea79d73e530b4ae55c572be97ef39f0990'
+      port_commit:
+        description: 'noas-slopware/linux-zflip3 senpai commit'
+        required: true
+        default: 'ce0353f99c7f264353d2824126b19539b9687f1d'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - name: Checkout port (senpai, patches + configs)
+        uses: actions/checkout@v4
+        with:
+          repository: noas-slopware/linux-zflip3
+          ref: ${{ inputs.port_commit }}
+          path: port
+          fetch-depth: 1
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex libelf-dev libssl-dev cpio xz-utils zstd rsync \
+            build-essential ca-certificates curl
+
+      - name: Fetch + verify kernel source
+        run: |
+          set -euo pipefail
+          V=${{ inputs.kernel_version }}
+          curl -fL --retry 3 -o linux.tar.xz \
+            "https://cdn.kernel.org/pub/linux/kernel/v${V%%.*}.x/linux-${V}.tar.xz"
+          echo "${{ inputs.kernel_sha256 }}  linux.tar.xz" | sha256sum -c -
+          tar -xf linux.tar.xz
+          mv "linux-${V}" linux
+
+      - name: Apply full b2q patch series + config
+        working-directory: linux
+        run: |
+          set -euo pipefail
+          P="$GITHUB_WORKSPACE/port"
+          echo "-2" > localversion.10-pkgrel
+          echo "-zflip3" > localversion.20-pkgname
+          n=0
+          for p in "$P"/patches/linux/[0-9][0-9][0-9][0-9]-*.patch; do
+            echo "patch: ${p##*/}"
+            patch -Np1 < "$p"
+            n=$((n+1))
+          done
+          echo "applied $n patches"
+          cp "$P/configs/nura-sm8350.config" .config
+          scripts/kconfig/merge_config.sh -m .config "$P/configs/b2q.fragment"
+          make olddefconfig
+          for sym in FB_SIMPLE FRAMEBUFFER_CONSOLE PINCTRL_SM8350 SCSI_UFS_QCOM \
+                     USB_DWC3_QCOM PHY_QCOM_QMP_COMBO PHY_QCOM_USB_SNPS_FEMTO_V2 \
+                     USB_CONFIGFS BLK_DEV_DM F2FS_FS F2FS_FS_SECURITY \
+                     USB_CONFIGFS_ACM MFD_MAX77705; do
+            grep -qx "CONFIG_$sym=y" .config || { echo "CONFIG_$sym did not land" >&2; exit 1; }
+          done
+          ! grep -qx 'CONFIG_DRM_SIMPLEDRM=y' .config
+          make -s kernelrelease > "$GITHUB_WORKSPACE/kernelrelease"
+          echo "kernelrelease=$(cat "$GITHUB_WORKSPACE/kernelrelease")"
+
+      - name: Build Image.gz, DTB, modules
+        working-directory: linux
+        run: |
+          set -euo pipefail
+          make -j"$(nproc)" Image.gz dtbs modules
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp arch/arm64/boot/Image.gz "$GITHUB_WORKSPACE/out/"
+          cp arch/arm64/boot/dts/qcom/sm8350-samsung-b2q.dtb "$GITHUB_WORKSPACE/out/"
+          make modules_install INSTALL_MOD_PATH="$GITHUB_WORKSPACE/out/modules-root"
+          cp .config "$GITHUB_WORKSPACE/out/kernel.config"
+          cp "$GITHUB_WORKSPACE/kernelrelease" "$GITHUB_WORKSPACE/out/"
+          cd "$GITHUB_WORKSPACE/out"
+          tar --use-compress-program=zstd -cf modules.tar.zst -C modules-root lib
+          rm -rf modules-root
+          sha256sum Image.gz sm8350-samsung-b2q.dtb modules.tar.zst kernel.config > SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-${{ inputs.kernel_version }}-full
+          path: out/*
+          if-no-files-found: error
+          include-hidden-files: true
