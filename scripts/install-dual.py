@@ -92,23 +92,23 @@ def main():
     time.sleep(0.5)
     t.buf = b''
 
-    t.read_until(rb'waiting_fedora_tar', timeout=180, label='fedora listener')
+    t.read_until(rb'FED_READY_[0-9]+', timeout=600, label='fedora listener')
     stream(5555, ['zstd', '-dc', a.tar], 'fedora')
-    t.read_until(rb'fedora_tar_done', timeout=900, label='fedora unpack')
+    t.read_until(rb'FED_DONE_[0-9]+', timeout=900, label='fedora unpack')
 
-    t.read_until(rb'waiting_owrt_image', timeout=180, label='owrt listener')
+    t.read_until(rb'OWRT_READY_[0-9]+', timeout=600, label='owrt listener')
     stream(5556, ['cat', a.owrt], 'openwrt')
-    t.read_until(rb'owrt_image_done', timeout=900, label='owrt dd')
+    t.read_until(rb'OWRT_DONE_[0-9]+', timeout=900, label='owrt dd')
 
-    t.read_until(rb'waiting_bootimg', timeout=180, label='boot listener')
+    t.read_until(rb'BOOT_READY_[0-9]+', timeout=600, label='boot listener')
     stream(5557, ['cat', a.boot_overlay], 'boot image')
-    t.read_until(rb'bootimg_done', timeout=300, label='bootimg unpack')
+    t.read_until(rb'BOOT_DONE_[0-9]+', timeout=300, label='bootimg unpack')
 
     t.read_until(rb'New password:', timeout=300, label='passwd')
     t.send(pw + '\r\n')
     t.read_until(rb'Retype new password:', timeout=60, label='passwd retype')
     t.send(pw + '\r\n')
-    t.read_until(rb'DUAL_DONE', timeout=600, label='install done')
+    t.read_until(rb'DUAL_DONE_[0-9]+', timeout=600, label='install done')
     print('\nDUAL_INSTALL_SELESAI')
     t.send('reboot -f\r\n')
 

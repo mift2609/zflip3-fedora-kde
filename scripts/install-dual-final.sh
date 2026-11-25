@@ -21,6 +21,7 @@ mkfs.f2fs -f -l b2q-root -O extra_attr,inode_checksum,sb_checksum,compression "/
 mkdir -p "$MOUNT"
 mount -t f2fs -o rw,noatime "/dev/$VG/root" "$MOUNT" || { echo "mount root failed" >&2; exit 1; }
 echo "waiting_fedora_tar"
+echo "FED_READY_$$"
 mkfifo /tmp/nc-fed
 exec 3<>/tmp/nc-fed
 nc -l -p 5555 <&3 | tar -C "$MOUNT" -xf -
@@ -28,8 +29,10 @@ exec 3>&-
 rm -f /tmp/nc-fed
 sync
 echo "fedora_tar_done"
+echo "FED_DONE_$$"
 
 echo "waiting_owrt_image"
+echo "OWRT_READY_$$"
 mkfifo /tmp/nc-owrt
 exec 4<>/tmp/nc-owrt
 nc -l -p 5556 <&4 | dd of="/dev/$VG/owrt" bs=1M conv=fsync 2>/dev/null
@@ -37,8 +40,10 @@ exec 4>&-
 rm -f /tmp/nc-owrt
 sync
 echo "owrt_image_done"
+echo "OWRT_DONE_$$"
 
 echo "waiting_bootimg"
+echo "BOOT_READY_$$"
 mkfifo /tmp/nc-boot
 exec 5<>/tmp/nc-boot
 nc -l -p 5557 <&5 | tar -C "$MOUNT" -xf -
@@ -46,6 +51,7 @@ exec 5>&-
 rm -f /tmp/nc-boot
 sync
 echo "bootimg_done"
+echo "BOOT_DONE_$$"
 
 for d in proc sys dev dev/pts; do mount --bind "/$d" "$MOUNT/$d"; done
 chroot "$MOUNT" useradd -m -G wheel,video,audio,input,render -s /bin/bash qiiin
@@ -65,3 +71,4 @@ echo "recovery_verified"
 sync
 umount "$MOUNT"
 echo "DUAL_DONE"
+echo "DUAL_DONE_$$"
