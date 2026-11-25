@@ -16,6 +16,12 @@ dari `recovery`, DTBO dikosongkan. OpenWrt lama akan ditimpa (disetujui).
       lewat program `libdrm` statis di initramfs (tanpa porting U-Boot). Belum diuji —
       jangan dijanjikan sebelum modeset cover di initramfs terbukti.
 
+Catatan selector (2026-11-25): image boot kustom dengan initramfs selector **ditolak ABL**
+(mentok logo Samsung), walaupun header hanya berubah di `ramdisk_size`. Untuk sementara
+`recovery` dikembalikan ke `installer.img` upstream, yang boot ke LV `root` (Fedora).
+Selector 10 detik Volume Up / 60 detik OpenWrt belum aktif; uji berikutnya harus lewat
+U-Boot fastboot (`fastboot boot`) sebelum flash ulang.
+
 ## Constraint hardware: layar utama rusak
 
 Target akhir: **layar cover saja** (512x260 landscape, DSI-2) yang dipakai.
