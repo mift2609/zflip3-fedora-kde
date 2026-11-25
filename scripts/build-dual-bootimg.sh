@@ -37,10 +37,10 @@ src,dst=sys.argv[1:]
 text=open(src).read()
 head=text.split('# --- root ---',1)[0]
 tail=r'''# --- root: OpenWrt by default, Volume Up -> Fedora ------------------------
-echo "Volume Up=Fedora, otherwise OpenWrt (3s)" > /dev/tty0
+echo "Volume Up within 60s = Fedora, otherwise OpenWrt" > /dev/tty0
 vol_up() { awk '/Volume Up/{print $2}' /proc/interrupts 2>/dev/null; }
 before=$(vol_up)
-sleep 3
+sleep 60
 pick=owrt
 [ "$(vol_up)" = "$before" ] || pick=fedora
 
