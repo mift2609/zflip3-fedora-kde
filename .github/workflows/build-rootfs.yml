@@ -1,0 +1,62 @@
+name: rootfs-fedora45-kde
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout b2q port (fstab + firmware config)
+        uses: actions/checkout@v4
+        with:
+          repository: noas-slopware/linux-zflip3
+          ref: ce0353f99c7f264353d2824126b19539b9687f1d
+          path: port
+          fetch-depth: 1
+
+      - name: Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            zstd xz-utils aria2 btrfs-progs
+
+      - name: Kernel from the successful build
+        uses: actions/download-artifact@v4
+        with:
+          name: kernel-7.3.5-full
+          path: out/kernel
+          run-id: 45617559867
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download sources
+        run: |
+          set -euo pipefail
+          mkdir -p cache
+          aria2c -c -x 8 -s 8 -d cache -o fedora.raw.xz \
+            https://dl.fedoraproject.org/pub/fedora/linux/releases/45/KDE/aarch64/images/Fedora-KDE-Desktop-Disk-45-1.4.aarch64.raw.xz
+          echo '457aab551cc4e1f11263013462b239c54e0a7c84b060cf434d4285ce4ae73f82  fedora.raw.xz' |
+            (cd cache && sha256sum -c -)
+          aria2c -c -x 4 -s 4 -d cache -o arch.tar.zst \
+            https://github.com/noas-slopware/linux-zflip3/releases/download/arch-ports-2026.11.18/archlinux-zflip3-2026.11.18-rootfs.tar.zst
+          curl -fL -o cache/linux.img.zst \
+            https://github.com/noas-slopware/linux-zflip3/releases/download/arch-ports-2026.11.18/archlinux-zflip3-2026.11.18-linux.img.zst
+          zstd -d -f cache/linux.img.zst -o cache/linux.img
+
+      - name: Assemble + pack rootfs
+        run: sudo bash scripts/build-rootfs-gh.sh
+
+      - name: Upload rootfs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora45-kde-rootfs
+          path: artifact/*
+          retention-days: 7
+          if-no-files-found: error
