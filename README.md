@@ -13,6 +13,22 @@ dari `recovery`, DTBO dikosongkan. OpenWrt lama akan ditimpa (disetujui).
 - [ ] Suntik modul + firmware + konfigurasi perangkat ke rootfs.
 - [ ] Uji boot tethered, lalu install via installer port (stream tar ke `nc 5555`).
 
+## Constraint hardware: layar utama rusak
+
+Target akhir: **layar cover saja** (512x260 landscape, DSI-2) yang dipakai.
+Upstream sengaja menandai connector cover `non_desktop = true`
+(`patches/linux/0036-...s6e36w3...patch`) supaya KWin/KScreen tidak menjadikannya
+output — cover hanya disewa oleh daemon `kita` untuk jam/notifikasi. Untuk
+cover-only perlu perubahan nyata, bukan sekadar konfigurasi:
+
+- patch 0036: hapus `non_desktop` agar KWin mengenali cover sebagai layar,
+- nonaktifkan panel utama di DTB/kernel supaya tidak dipakai KWin,
+- tangani rotasi 260x512 → 512x260 di KWin,
+- 512x260 terlalu kecil untuk Plasma Desktop; shell cover (`kita`, port ke Fedora)
+  atau Plasma Mobile lebih realistis.
+
+Instalasi tetap bisa lewat telnet USB `172.16.42.1` — tidak bergantung layar utama.
+
 Kenapa kernel port, bukan kernel Fedora stok: patch b2q (panel 120 Hz, UFS,
 charging, sensor, kamera, modem) tidak ada di kernel Fedora. Kernel dibangun
 dengan krelease `7.3.5-2-zflip3` supaya kompatibel dengan paket modul port.
