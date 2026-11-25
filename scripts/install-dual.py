@@ -82,12 +82,15 @@ def main():
     pw = open(a.password_file).read().strip()
 
     t = Telnet()
-    t.send('sh -s\r\n')
+    t.send("cat > /tmp/install-dual.sh <<'__ZF3EOF__'\r\n")
     for line in open(a.script):
         t.send(line, 0.005)
-    t.send('\n')
+    t.send('__ZF3EOF__\r\n')
     time.sleep(1)
-    t.buf = b''   # discard the PTY echo of the script itself
+    t.buf = b''   # discard the PTY echo of the heredoc
+    t.send('sh /tmp/install-dual.sh\r\n')
+    time.sleep(0.5)
+    t.buf = b''
 
     t.read_until(rb'waiting_fedora_tar', timeout=180, label='fedora listener')
     stream(5555, ['zstd', '-dc', a.tar], 'fedora')
