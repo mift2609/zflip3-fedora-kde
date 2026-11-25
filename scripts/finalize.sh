@@ -16,6 +16,9 @@ find_part() {
 
 lvm vgchange -ay --sysinit b2q
 mountpoint -q "$MOUNT" 2>/dev/null || mount -t f2fs -o rw,noatime /dev/b2q/root "$MOUNT"
+# The raw Fedora image ships the loader in /usr/lib but no /lib symlink.
+ln -sf ../usr/lib/ld-linux-aarch64.so.1 "$MOUNT/lib/ld-linux-aarch64.so.1"
+ln -sf ../lib/ld-linux-aarch64.so.1 "$MOUNT/lib64/ld-linux-aarch64.so.1"
 for d in proc sys dev dev/pts; do mount --bind "/$d" "$MOUNT/$d"; done
 chroot "$MOUNT" /usr/sbin/useradd -m -G wheel,video,audio,input,render -s /bin/bash qiiin 2>/dev/null || true
 echo "password_for_qiiin"
