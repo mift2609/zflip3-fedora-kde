@@ -60,7 +60,12 @@ fi
 
 echo "[4/5] kernel modules, boot image, b2q config"
 tar --zstd -xf "$KDIR/modules.tar.zst" -C "$ROOT"
-[ -d "$ROOT/usr/lib/modules/$KREL" ] || { echo "modules missing" >&2; exit 1; }
+if [ ! -d "$ROOT/usr/lib/modules/$KREL" ]; then
+  echo "      lib -> $(readlink "$ROOT/lib" 2>/dev/null || echo real-directory)"
+  [ -d "$ROOT/lib/modules/$KREL" ] || { echo "modules missing" >&2; exit 1; }
+  mkdir -p "$ROOT/usr/lib/modules"
+  cp -a "$ROOT/lib/modules/$KREL" "$ROOT/usr/lib/modules/"
+fi
 install -Dm644 "$KDIR/kernel.config" "$ROOT/boot/config-$KREL"
 install -Dm644 "$CACHE/linux.img" "$ROOT/boot/linux-zflip3.img"
 install -Dm644 "$PORT/userspace/rootfs/etc/fstab" "$ROOT/etc/fstab"
