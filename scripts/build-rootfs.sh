@@ -29,7 +29,7 @@ echo "[2/6] Fedora 45 KDE Plasma Desktop raw image (3.8 GiB)"
 RAW_XZ="$CACHE/$FED_RAW"
 RAW="$CACHE/fedora45.raw"
 if [ ! -s "$RAW_XZ" ]; then
-  rm -f "$RAW_XZ.part" "$RAW_XZ.aria2"
+  rm -f "$RAW_XZ.part"
   aria2c -c -x 8 -s 8 --dir="$CACHE" --out="$FED_RAW" "$FED_URL"
 fi
 curl -fsSL "$FED_SHA_URL" | grep -F "$FED_RAW" |
