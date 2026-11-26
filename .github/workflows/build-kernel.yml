@@ -76,6 +76,21 @@ jobs:
           make -s kernelrelease > "$GITHUB_WORKSPACE/kernelrelease"
           echo "kernelrelease=$(cat "$GITHUB_WORKSPACE/kernelrelease")"
 
+      - name: Cover display as the primary output
+        working-directory: linux
+        run: |
+          set -euo pipefail
+          # Unit ini panel utamanya rusak: pakai layar cover (S6E36W3 di DSI1) sebagai
+          # satu-satunya output, dan jangan tandai non-desktop supaya KWin/KScreen
+          # membuat screen di atasnya (kalau tidak, KDE tak punya layar sama sekali).
+          P=drivers/gpu/drm/panel/panel-samsung-s6e36w3.c
+          grep -q 'connector->display_info.non_desktop = true;' "$P"
+          sed -i 's/connector->display_info.non_desktop = true;/connector->display_info.non_desktop = false;/' "$P"
+          ! grep -q 'connector->display_info.non_desktop = true;' "$P"
+          D=arch/arm64/boot/dts/qcom/sm8350-samsung-b2q.dts
+          printf '\n/* zflip3: panel utama unit ini rusak -> hanya cover (DSI1) dipakai */\n&mdss_dsi0 {\n\tstatus = "disabled";\n};\n' >> "$D"
+          tail -6 "$D"
+
       - name: Build Image.gz, DTB, modules
         working-directory: linux
         run: |
