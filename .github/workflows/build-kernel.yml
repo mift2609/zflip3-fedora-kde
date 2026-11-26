@@ -89,7 +89,15 @@ jobs:
           ! grep -q 'connector->display_info.non_desktop = true;' "$P"
           D=arch/arm64/boot/dts/qcom/sm8350-samsung-b2q.dts
           printf '\n/* zflip3: panel utama unit ini rusak -> hanya cover (DSI1) dipakai */\n&mdss_dsi0 {\n\tstatus = "disabled";\n};\n' >> "$D"
-          tail -6 "$D"
+          # ramoops: console log bertahan di RAM lintas reboot -> bisa dibaca boot
+          # berikutnya lewat /sys/fs/pstore walau kanal USB/gadget mati.
+          # Ditulis lewat path node, bukan label: label di dtsi belum pasti ada.
+          printf '\n/ {\n\treserved-memory {\n\t\tramoops@f0b00000 {\n\t\t\tstatus = "okay";\n\t\t};\n\t};\n};\n' >> "$D"
+          # USB: role switch diatur MAX77705; kalau charger itu belum siap, DWC3 diam
+          # (bukan host -> keyboard mati, bukan device -> gadget/USB-Serial mati).
+          # Defaultkan ke peripheral supaya kanal konsol USB selalu ada.
+          printf '\n&usb_1_dwc3 {\n\trole-switch-default-mode = "peripheral";\n};\n' >> "$D"
+          tail -12 "$D"
 
       - name: Build Image.gz, DTB, modules
         working-directory: linux
